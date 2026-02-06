@@ -1,0 +1,6 @@
+requests
+fastapi
+uvicorn
+python-multipart
+brotli
+youtube-transcript-api
