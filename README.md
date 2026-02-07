@@ -1,52 +1,59 @@
-# 🎬 YouTube Shorts Fetcher API & Control Panel
+# 🎬 YouTube Shorts Smart Fetcher (v2.6.3)
 
-A powerful, local-first API to scrape YouTube Shorts metadata (Hashtag or Search) with a built-in GUI Dashboard for easy management and internet tunneling.
+A powerful, local-first API to scrape YouTube Shorts metadata and search results. Now featuring a professional GUI and seamless **ngrok** integration for external access (perfect for n8n/webhooks).
 
-## ✨ Features
-- **FastAPI Backend**: Optimized for scraping YouTube Shorts metadata (Video ID, Title, Views, Thumbnails).
-- **GUI Control Panel**: Manage the API and Tunnel without touching the command line.
-- **Auto-Tunneling**: Uses `localhost.run` to expose your local API to the internet (perfect for n8n/webhooks) without a permanent account.
-- **Vertical-Only Logic**: Specifically extracts 9:16 Shorts data.
+## ✨ New Features (v2.6.3)
+- **Bundled Functionality**: Run as a single portable `.exe` (no Python required).
+- **Library Integration**: Includes `youtube-search-python` for advanced search (Videos, Channels, Playlists).
+- **Broken Link Fixes**: Custom patched logic to handle YouTube's latest UI changes.
+- **Deep Fetch**: Automatically retrieves Title, Views, Channel, Thumbnails, and **Transcripts** for Shorts.
 
-## 🚀 Quick Start
+---
 
-### 1. Prerequisites
-- Python 3.8+
-- Git
+## 🚨 IMPORTANT: NGROK TOKEN REQUIRED 🚨
+To use the **"Go Online"** feature, you **MUST** have a free ngrok Authtoken.
+1.  **Sign Up**: Go to [dashboard.ngrok.com](https://dashboard.ngrok.com) and create a free account.
+2.  **Get Token**: Copy your **Authtoken** from the dashboard (starts with `2...`).
+3.  **Enter in App**: Paste it into the "Enter ngrok Authtoken" box in the GUI and click **Save Token**.
+4.  **Connect**: Now you can click "Go Online" anytime!
 
-### 2. Installation
+> **Without this token, the "Go Online" button will fail with an authentication error.**
+
+---
+
+## 🚀 Quick Start (EXE Users)
+1.  Download `YouTubeShortsGUI.exe` from the `dist` folder.
+2.  Double-click to run.
+3.  Click **"Start Local Server"**.
+4.  (Optional) Add your ngrok token and click **"Go Online"** to get a public URL.
+
+## 💻 Developer Installation (Source Code)
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd firstproject
+git clone https://github.com/expher510/YouTube_Shorts_API-and-Control_Panel.git
+cd YouTube_Shorts_Tool
 
-# Create a virtual environment
+# Create environment & Install dependencies
 python -m venv .venv
-
-# Activate environment (Windows)
 .venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
+pip install youtube-search-python yt-dlp
+
+# Run the App
+python short_app.py
 ```
 
-### 3. Usage
-Run the Dashboard to start the API and the Tunnel:
-```bash
-python short_gui.py
-```
-- Click **"START ALL"** to launch the API and create a public URL.
-- Copy the **Public URL** for your webhooks or n8n workflows.
+## 🔌 API Endpoints
+### Core Shorts API
+- `GET /search?query=cats&limit=10`: Scrapes Shorts with rich metadata.
+- `GET /fetch?hashtag=funny&limit=10`: Scrapes Shorts by hashtag.
 
-### 2. Available Endpoints
-- `GET /search?query=...&limit=20`: Search for shorts. Returns **full metadata and transcripts** by default.
-- `GET /fetch?hashtag=...&limit=20`: Fetch by hashtag. Returns **full metadata and transcripts** by default.
-
-## 🛠 Project Structure
-- `short_gui.py`: The main GUI application.
-- `short_api.py`: The FastAPI core logic.
-- `requirements.txt`: Project dependencies.
-- `.gitignore`: Files excluded from GitHub.
+### Library Integration (`/ysp`)
+- `GET /ysp/search/videos?query=...`: Search standard videos.
+- `GET /ysp/search/channels?query=...`: Search channels.
+- `GET /ysp/search/playlists?query=...`: Search playlists.
+- `GET /ysp/comments?video_id=...`: specific video comments.
+- *(Note: Some legacy info endpoints provided as-is)*.
 
 ## ⚠️ Disclaimer
 This tool is for educational purposes. Please respect YouTube's Terms of Service and use it responsibly.

@@ -140,6 +140,159 @@ def search(query: str, limit: int = 10):
     videos = extract_videos(query, False, limit)
     return {"status": "success", "count": len(videos), "videos": videos}
 
+# ==========================================
+#   YOUTUBE-SEARCH-PYTHON LIBRARY INTEGRATION
+# ==========================================
+# [MONKEY PATCH] Fix for unmaintained library crash (NoneType concatenation)
+from youtubesearchpython.handlers.componenthandler import ComponentHandler
+from youtubesearchpython.core.constants import videoElementKey
+
+def _getVideoComponent_safe(self, element: dict, shelfTitle: str = None) -> dict:
+    video = element[videoElementKey]
+    component = {
+        'type':                           'video',
+        'id':                              self._getValue(video, ['videoId']),
+        'title':                           self._getValue(video, ['title', 'runs', 0, 'text']),
+        'publishedTime':                   self._getValue(video, ['publishedTimeText', 'simpleText']),
+        'duration':                        self._getValue(video, ['lengthText', 'simpleText']),
+        'viewCount': {
+            'text':                        self._getValue(video, ['viewCountText', 'simpleText']),
+            'short':                       self._getValue(video, ['shortViewCountText', 'simpleText']),
+        },
+        'thumbnails':                      self._getValue(video, ['thumbnail', 'thumbnails']),
+        'richThumbnail':                   self._getValue(video, ['richThumbnail', 'movingThumbnailRenderer', 'movingThumbnailDetails', 'thumbnails', 0]),
+        'descriptionSnippet':              self._getValue(video, ['detailedMetadataSnippets', 0, 'snippetText', 'runs']),
+        'channel': {
+            'name':                        self._getValue(video, ['ownerText', 'runs', 0, 'text']),
+            'id':                          self._getValue(video, ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']),
+            'thumbnails':                  self._getValue(video, ['channelThumbnailSupportedRenderers', 'channelThumbnailWithLinkRenderer', 'thumbnail', 'thumbnails']),
+        },
+        'accessibility': {
+            'title':                       self._getValue(video, ['title', 'accessibility', 'accessibilityData', 'label']),
+            'duration':                    self._getValue(video, ['lengthText', 'accessibility', 'accessibilityData', 'label']),
+        },
+    }
+    # SAFELY handle IDs
+    v_id = component['id']
+    component['link'] = ('https://www.youtube.com/watch?v=' + v_id) if v_id else None
+    
+    c_id = component['channel']['id']
+    component['channel']['link'] = ('https://www.youtube.com/channel/' + c_id) if c_id else None
+    
+    component['shelfTitle'] = shelfTitle
+    return component
+
+ComponentHandler._getVideoComponent = _getVideoComponent_safe
+
+from youtubesearchpython import (
+    VideosSearch, ChannelsSearch, PlaylistsSearch, Search, CustomSearch, 
+    VideoSortOrder, Suggestions, Hashtag, Video, Playlist, Channel, 
+    Comments, Transcript, StreamURLFetcher
+)
+
+@app.get("/ysp/search/videos", tags=["YouTube Search Python Lib"])
+def ysp_search_videos(query: str, limit: int = 5):
+    """Search for videos only."""
+    s = VideosSearch(query, limit=limit)
+    return s.result()
+
+@app.get("/ysp/search/channels", tags=["YouTube Search Python Lib"])
+def ysp_search_channels(query: str, limit: int = 5):
+    """Search for channels only."""
+    s = ChannelsSearch(query, limit=limit)
+    return s.result()
+
+@app.get("/ysp/search/playlists", tags=["YouTube Search Python Lib"])
+def ysp_search_playlists(query: str, limit: int = 5):
+    """Search for playlists only."""
+    s = PlaylistsSearch(query, limit=limit)
+    return s.result()
+
+@app.get("/ysp/search/all", tags=["YouTube Search Python Lib"])
+def ysp_search_all(query: str, limit: int = 5):
+    """Search for everything (mixed)."""
+    s = Search(query, limit=limit)
+    return s.result()
+
+@app.get("/ysp/search/custom", tags=["YouTube Search Python Lib"])
+def ysp_search_custom(query: str, limit: int = 5, upload_date: bool = False):
+    """Custom search example (Upload Date sort)."""
+    s = CustomSearch(query, VideoSortOrder.uploadDate, limit=limit)
+    return s.result()
+
+@app.get("/ysp/video/info", tags=["YouTube Search Python Lib"])
+def ysp_video_info(url_or_id: str):
+    """Get video info."""
+    try:
+        return Video.get(url_or_id, mode=0, get_upload_date=True)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ysp/playlist/info", tags=["YouTube Search Python Lib"])
+def ysp_playlist_info(url_or_id: str):
+    """Get playlist info."""
+    try:
+        return Playlist.get(url_or_id, mode=0)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ysp/channel/info", tags=["YouTube Search Python Lib"])
+def ysp_channel_info(channel_id: str):
+    """Get channel info."""
+    try:
+        return Channel.get(channel_id)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ysp/suggestions", tags=["YouTube Search Python Lib"])
+def ysp_suggestions(query: str):
+    """Get search suggestions."""
+    return Suggestions(language='en', region='US').get(query, mode=0)
+
+@app.get("/ysp/hashtag", tags=["YouTube Search Python Lib"])
+def ysp_hashtag(tag: str, limit: int = 5):
+    """Get videos by hashtag."""
+    return Hashtag(tag, limit=limit).result()
+
+@app.get("/ysp/comments", tags=["YouTube Search Python Lib"])
+def ysp_comments(video_id: str, limit: int = 20):
+    """Get video comments."""
+    # Note: Library may not support 'limit' directly in constructor for all versions, 
+    # but has .get() method. Using simplest approach.
+    try:
+        c = Comments.get(video_id)
+        return c
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ysp/transcript", tags=["YouTube Search Python Lib"])
+def ysp_transcript(video_url: str):
+    """Get video transcript using this library."""
+    try:
+        return Transcript.get(video_url)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ysp/stream_url", tags=["YouTube Search Python Lib"])
+def ysp_stream_url(video_url: str):
+    """Get direct stream URL (requires yt-dlp installed)."""
+    try:
+        fetcher = StreamURLFetcher()
+        video = Video.get(video_url)
+        # Attempt to get stream for itag 22 (720p) or 18 (360p) or similar if specific extraction needed
+        # Or just return all via the fetcher helper if library supports generic 'get all'
+        # The user example: fetcher.get(video, 251) -> audio
+        # We will try to get a common video format, e.g., 22 (720p mp4) or 18 (360p mp4)
+        # However, listing all formats is safer.
+        # But user asked for "get(video, 251)" example style.
+        # Let's try to get a standard MP4 URL.
+        url = fetcher.get(video, 22) # 720p
+        if not url:
+            url = fetcher.get(video, 18) # 360p fallback
+        return {"stream_url": url, "itag": "22/18"}
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7861))
     print(f"STARTUP: API v2.6.3 listening on port {port}")
