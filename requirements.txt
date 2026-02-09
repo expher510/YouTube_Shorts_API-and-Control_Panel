@@ -4,3 +4,7 @@ uvicorn
 python-multipart
 brotli
 youtube-transcript-api
+customtkinter
+youtube-search-python
+yt-dlp
+pyngrok
